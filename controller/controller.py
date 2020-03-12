@@ -154,6 +154,10 @@ def callback_daily_update(context: telegram.ext.CallbackContext):
     get_daily_menu(update=None, context=context, chat_id=-1001316049000)
 
 
+def callback_daily_results(context: telegram.ext.CallbackContext):
+    close_daily_poll(update=None, context=context)
+
+
 def daily_poll(update, context):
     """
     Send daily_poll
@@ -163,6 +167,10 @@ def daily_poll(update, context):
 
 
 def schedule(update, context):
+    if config.CURRENT_POLL is not None:
+        if not config.CURRENT_POLL.active:
+            return
+
     options = ['11:40 Uhr', '12:10 Uhr', '12:40 Uhr', '13:10 Uhr', '13:30 Uhr', '13:50 Uhr']
     context.chat_data['options'] = options
 
@@ -179,12 +187,32 @@ def schedule(update, context):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     context.chat_data['current_poll'] = PollData(options)
+    config.CURRENT_POLL = context.chat_data['current_poll']
+    config.CURRENT_POLL_ACTIVE = True
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Please choose your preferred times:', reply_markup=reply_markup)
+    message = context.bot.send_message(chat_id=update.effective_chat.id, text='Please choose your preferred times:',
+                                       reply_markup=reply_markup)
+
+    config.CURRENT_POLL_ID = message.message_id
+    config.CHAT_ID = update.effective_chat.id
 
 
 def close_poll(update, context):
     return context.bot.stop_poll(chat_id=update.effective_chat.id, message_id=config.CURRENT_POLL.message_id)
+
+
+def close_daily_poll(update, context):
+    message = 'Final polling results:\n' \
+              f'{config.CURRENT_POLL.get_results()}\n\n' \
+              f'{config.CURRENT_POLL.get_final_choice()}'
+    try:
+        context.bot.edit_message_text(chat_id=config.CHAT_ID, message_id=config.CURRENT_POLL_ID,
+                                      text=message,
+                                      reply_markup=None, parse_mode=telegram.ParseMode.HTML)
+    except telegram.error.BadRequest as bre:
+        print('Message did not change.')
+
+    config.CURRENT_POLL.active = False
 
 
 def inline(update, context):
@@ -237,16 +265,10 @@ def button(update, context) -> None:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Showing tomorrow\'s L6 menu.')
         l6_tomorrow(update, context)
 
-    elif query.data == 'close_poll':
-        config.POLL_RESULTS = close_poll(update, context).to_dict()
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Results:')
-
-        option_votes = [f'{option["text"]}: {option["voter_count"]}' for option in config.POLL_RESULTS['options']]
-        message = f'*{config.POLL_RESULTS["question"]}*\n\n' + '\n'.join(option_votes)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode=telegram.ParseMode.MARKDOWN)
-
     elif query.data.startswith('option'):
         # print(query)
+        if not context.chat_data['current_poll'].active:
+            return
 
         option_list = context.chat_data['options']
         option_chosen = query.data.split('_')[-1]
@@ -269,9 +291,12 @@ def button(update, context) -> None:
         # context.bot.send_message(chat_id=update.effective_chat.id, text=f'*{query.from_user.username}: {query.data}*',
         #                          parse_mode=telegram.ParseMode.MARKDOWN)
 
+        message = 'Live polling:\n' \
+                  f'{context.chat_data["current_poll"].get_results()}\n' \
+                  f'Polling closes at 11:00 a.m.'
         try:
             context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=query.message.message_id,
-                                          text=context.chat_data['current_poll'].get_results(),
+                                          text=message,
                                           reply_markup=query.message.reply_markup, parse_mode=telegram.ParseMode.HTML)
         except telegram.error.BadRequest as bre:
             print('Message did not change.')

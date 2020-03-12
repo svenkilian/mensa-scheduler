@@ -14,5 +14,8 @@ pd.set_option('display.width', 800)
 pd.set_option('display.html.table_schema', False)
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 CURRENT_POLL = None
-POLL_RESULTS = None
+CURRENT_POLL_ID = None
+CHAT_ID = None
+

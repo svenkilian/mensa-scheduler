@@ -10,7 +10,7 @@ from colorama import Fore, Style
 from telegram.ext import Updater
 
 import config
-from controller.controller import callback_daily_update, Controller
+from controller.controller import callback_daily_update, Controller, callback_daily_results
 from model.model import Mensa
 
 
@@ -42,8 +42,11 @@ def main():
     queue = updater.job_queue
 
     # JOB: Schedule daily menu update message
-    job_daily_update = queue.run_daily(time=datetime.time(hour=20, minute=57, second=0, tzinfo=pytz.timezone('CET')),
+    job_daily_update = queue.run_daily(time=datetime.time(hour=0, minute=46, second=30, tzinfo=pytz.timezone('CET')),
                                        callback=callback_daily_update)
+
+    job_daily_update = queue.run_daily(time=datetime.time(hour=0, minute=47, second=0, tzinfo=pytz.timezone('CET')),
+                                       callback=callback_daily_results)
 
     # JOB: Start bot
     updater.start_polling()
