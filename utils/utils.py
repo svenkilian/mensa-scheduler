@@ -1,3 +1,5 @@
+from typing import Union
+
 import pandas as pd
 from tabulate import tabulate
 
@@ -20,3 +22,30 @@ def pretty_print_table(df: pd.DataFrame, headers='keys', tablefmt='fancy_grid', 
 def prettify_table(df: pd.DataFrame, headers='keys', tablefmt='fancy_grid', show_index=False):
     # 'plain', 'simple', 'grid', 'pipe', 'orgtbl', 'rst', 'mediawiki', 'latex', 'latex_raw' and 'latex_booktabs
     return tabulate(df, tablefmt=tablefmt, showindex=show_index, floatfmt='.2f', numalign='decimal', stralign='left')
+
+
+def get_symbol(meal_name, note_list: list) -> str:
+    symbol_dict = {'vegan': u'🍃', 'vegetarisch': u'🥕', 'fleisch': u'🥩', 'steak': u'🥩', 'wurst': u'🥩'}
+
+    if len(note_list) == 0:
+        note_string = ''
+    else:
+        note_string = note_list[0]
+
+    for key in symbol_dict.keys():
+        if key in note_string:
+            print(f'Key {key} in note_string.')
+            symbol = symbol_dict.get(key)
+            print(symbol)
+            return symbol
+    else:
+        print('Not found in first')
+        for key in symbol_dict.keys():
+            if key in meal_name:
+                print(f'Key {key} in meal_name.')
+                symbol = symbol_dict.get(key)
+                print(symbol)
+                return symbol
+        else:
+            symbol = ''
+            return symbol

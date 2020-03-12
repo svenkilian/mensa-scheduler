@@ -84,9 +84,10 @@ def get_daily_menu(update, context, chat_id, l6=False):
                  Mensa().meal_data_lines(offset=offset)]
 
     for line, contents in line_data:
-        contents = contents.loc[line].reset_index()['name'].apply(
+        contents = contents.loc[line].reset_index().apply(
             lambda
-                x: f'{emojize(":small_orange_diamond:", use_aliases=True)} {x}').tolist()  # TODO: Add number emojis to lines
+                x: f'{emojize(":small_orange_diamond:", use_aliases=True)} {x["name"]}',
+            axis=1).tolist()  # TODO: Add number emojis to lines
 
         if any(e in line for e in whitelist):
             text += f'\n\n*{line}*:\n' + '\n'.join(contents)

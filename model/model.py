@@ -3,6 +3,8 @@ import datetime
 import pandas as pd
 import requests
 
+from utils.utils import get_symbol
+
 
 class Mensa:
     """
@@ -67,7 +69,11 @@ class Mensa:
             lambda x: '{:4.2f}'.format(float(x.get('students'))) + ' €' if x.get(
                 'students') is not None else '-')  # Extract student prices
 
-        df.drop(columns=['id', 'notes', 'prices'], inplace=True)
+        df['symbol'] = df.reset_index().apply(lambda x: get_symbol(x['name'], x['notes']), axis=1)
+
+        df.drop(columns=['id', 'prices'], inplace=True)
+
+        print(df)
 
         return df
 
