@@ -25,12 +25,15 @@ def prettify_table(df: pd.DataFrame, headers='keys', tablefmt='fancy_grid', show
 
 
 def get_symbol(meal_name: str, note_list: list) -> str:
-    symbol_dict = {'vegan': u'🍃', 'vegetarisch': u'🥕', 'fleisch': u'🥩', 'steak': u'🥩', 'wurst': u'🥩'}
+    symbol_dict = {'vegan': u'🍃', 'vegetarisch': u'🥕', 'fleisch': u'🥩', 'steak': u'🥩', 'wurst': u'🥩',
+                   u'hnchen': u'🐔', 'schwein': u'🐖'}
 
     if len(note_list) == 0:
         note_string = ''
     else:
-        note_string = note_list[0]
+        note_string = note_list[0].lower()
+
+    key = None
 
     for key in symbol_dict.keys():
         if key in note_string:
@@ -39,7 +42,7 @@ def get_symbol(meal_name: str, note_list: list) -> str:
             print(symbol)
             return symbol
     else:
-        print('Not found in first')
+        print(f'{key} not found in first')
         for key in symbol_dict.keys():
             if key in meal_name:
                 print(f'Key {key} in meal_name.')
@@ -48,4 +51,13 @@ def get_symbol(meal_name: str, note_list: list) -> str:
                 return symbol
         else:
             symbol = ''
+            print(f'{key} not found in second')
             return symbol
+
+
+def is_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False

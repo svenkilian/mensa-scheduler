@@ -1,4 +1,5 @@
 import datetime
+from math import ceil
 
 import telegram
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InputTextMessageContent, \
@@ -7,7 +8,8 @@ from telegram.ext import CommandHandler, MessageHandler, Filters, InlineQueryHan
 from emoji import emojize
 
 import config
-from model.model import Mensa
+from model.model import Mensa, PollData
+from utils.utils import is_int
 
 
 class Controller:
@@ -25,6 +27,7 @@ class Controller:
         help_handler = CommandHandler('help', help)
         today_handler = CommandHandler('today', today)
         tomorrow_handler = CommandHandler('tomorrow', tomorrow)
+        schedule_handler = CommandHandler('schedule', schedule)
         l6_today_handler = CommandHandler('l6_today', l6_today)
         l6_tomorrow_handler = CommandHandler('l6_tomorrow', l6_today)
         poll_handler = CommandHandler('daily_poll', daily_poll)
@@ -37,6 +40,7 @@ class Controller:
         self.dispatcher.add_handler(CallbackQueryHandler(button))
         self.dispatcher.add_handler(today_handler)
         self.dispatcher.add_handler(tomorrow_handler)
+        self.dispatcher.add_handler(schedule_handler)
         self.dispatcher.add_handler(l6_today_handler)
         self.dispatcher.add_handler(l6_tomorrow_handler)
         self.dispatcher.add_handler(poll_handler)
@@ -54,7 +58,7 @@ def start(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text='Welcome to MensaBot!')
 
     keyboard = [[InlineKeyboardButton('Today\'s Menu', callback_data='daily'),
-                 InlineKeyboardButton('Poll', callback_data='daily_poll')]]
+                 InlineKeyboardButton('Schedule', callback_data='daily_poll')]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -143,55 +147,38 @@ def tomorrow(update, context):
 
 
 def callback_daily_update(context: telegram.ext.CallbackContext):
-    get_daily_menu(update=None, context=context, chat_id=-1001463530288)
+    # get_daily_menu(update=None, context=context, chat_id=-1001463530288)
+    get_daily_menu(update=None, context=context, chat_id=-1001316049000)
 
 
-def daily_poll(update, context, chat_id=None):
+def daily_poll(update, context):
     """
     Send daily_poll
     """
 
-    if chat_id is None:
-        chat_id = update.effective_chat.id
+    schedule(update, context)
 
-    options = ['11:40 Uhr', '12:10 Uhr', '12:40 Uhr', '13:10 Uhr', '13:30 Uhr', '13:50 Uhr',
-               'Other']
 
-    config.CURRENT_POLL = send_poll(context=context, chat_id=chat_id,
-                                    question='What time do you want to have lunch today?',
-                                    options=options,
-                                    disable_notification=True, is_anonymous=True, allows_multiple_answers=True)
+def schedule(update, context):
+    options = ['11:40 Uhr', '12:10 Uhr', '12:40 Uhr', '13:10 Uhr', '13:30 Uhr', '13:50 Uhr']
+    context.chat_data['options'] = options
 
-    keyboard = [[InlineKeyboardButton('Close Poll', callback_data='close_poll')]]
+    n_rows = ceil(len(options) / 3)
+    keyboard = [[] for _ in range(n_rows)]
+    for num, option in enumerate(options):
+        row_index = num // 3
+        print(row_index)
+        keyboard[row_index].append(InlineKeyboardButton(option, callback_data=f'option_{num}'))
+
+    keyboard.append([InlineKeyboardButton('Delete all', callback_data=f'option_delete')])
+    keyboard.append([InlineKeyboardButton('Deal me out', callback_data=f'option_declined')])
+    options.append('Out')
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(chat_id=chat_id, text='Click below to close poll:', reply_markup=reply_markup)
 
+    context.chat_data['current_poll'] = PollData(options)
 
-def send_poll(context,
-              chat_id,
-              question,
-              options,
-              disable_notification=None,
-              reply_to_message_id=None,
-              reply_markup=None,
-              timeout=None,
-              **kwargs):
-    """
-    Use this method to send a native daily_poll. A native daily_poll can't be sent to a private chat.
-    """
-    url = '{0}/sendPoll'.format(context.bot.base_url)
-
-    data = {
-        'chat_id': chat_id,
-        'question': question,
-        'options': options
-    }
-
-    data.update(kwargs)
-
-    return context.bot._message(url, data, timeout=timeout, disable_notification=disable_notification,
-                                reply_to_message_id=reply_to_message_id, reply_markup=reply_markup)
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Please choose:', reply_markup=reply_markup)
 
 
 def close_poll(update, context):
@@ -210,9 +197,9 @@ def inline(update, context):
     results = list()
     results.append(
         InlineQueryResultArticle(
-            id=query.upper(),
-            title='Action',
-            input_message_content=InputTextMessageContent(query.upper())
+            id=query,
+            title='/schedule',
+            input_message_content=InputTextMessageContent(query)
         )
     )
     context.bot.answer_inline_query(update.inline_query.id, results)
@@ -234,8 +221,7 @@ def button(update, context) -> None:
         today(update, context)
 
     elif query.data == 'daily_poll':
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Poll')
-        daily_poll(update, context, chat_id=update.effective_chat.id)
+        daily_poll(update, context)
 
     elif query.data == 'tomorrow':
         context.bot.send_message(chat_id=update.effective_chat.id, text='Showing tomorrow\'s menu.')
@@ -256,6 +242,39 @@ def button(update, context) -> None:
         option_votes = [f'{option["text"]}: {option["voter_count"]}' for option in config.POLL_RESULTS['options']]
         message = f'*{config.POLL_RESULTS["question"]}*\n\n' + '\n'.join(option_votes)
         context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode=telegram.ParseMode.MARKDOWN)
+
+    elif query.data.startswith('option'):
+        # print(query)
+
+        option_list = context.chat_data['options']
+        option_chosen = query.data.split('_')[-1]
+
+        # JOB: Register vote
+        if is_int(option_chosen):
+            option_chosen = int(option_chosen)
+            context.chat_data['current_poll'].set_choice(user_first_name=query.from_user.first_name,
+                                                         option=option_list[option_chosen])
+        else:
+            if option_chosen == 'declined':
+                context.chat_data['current_poll'].data.loc[
+                    query.from_user.first_name, 'Out'] = 1
+                context.chat_data['current_poll'].delete_user(query.from_user.first_name, times_only=True)
+            elif option_chosen == 'delete':
+                context.chat_data['current_poll'].delete_user(query.from_user.first_name)
+
+        # context.bot.send_message(chat_id=update.effective_chat.id, text=f'*{query.from_user.username}: {query.data}*',
+        #                          parse_mode=telegram.ParseMode.MARKDOWN)
+
+        try:
+            context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=query.message.message_id,
+                                          text=context.chat_data['current_poll'].get_results(),
+                                          reply_markup=query.message.reply_markup)
+        except telegram.error.BadRequest as bre:
+            print('Message did not change.')
+        except telegram.error.TimedOut as toe:
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f'Timed out. Request sent by {query.from_user.first_name}',
+                                     parse_mode=telegram.ParseMode.MARKDOWN)
 
 
 def unknown(update, context):

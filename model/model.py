@@ -80,3 +80,28 @@ class Mensa:
 
     def meal_data_lines(self, offset=0):
         return self.meal_data(offset=offset).groupby(level=0, sort=False)
+
+
+class PollData:
+    def __init__(self, option_list):
+        self.data = pd.DataFrame(columns=option_list, dtype='int8')
+        self.data.index.name = 'user_id'
+
+    def get_data(self):
+        return self.data
+
+    def set_choice(self, user_first_name, option):
+        self.data.loc[user_first_name, option] = 1
+        self.data.loc[user_first_name, 'Out'] = 0
+
+    def get_results(self):
+        times = self.data.T.apply(lambda x: ', '.join(x.loc[x == 1].index.tolist()), axis=1)
+        print(times)
+
+        return times.to_string()
+
+    def delete_user(self, user_first_name, times_only=False):
+        if times_only:
+            self.data.loc[user_first_name, [col for col in self.data.columns if col != 'Out']] = 0
+        else:
+            self.data.loc[user_first_name, :] = 0
