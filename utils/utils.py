@@ -24,7 +24,7 @@ def prettify_table(df: pd.DataFrame, headers='keys', tablefmt='fancy_grid', show
     return tabulate(df, tablefmt=tablefmt, showindex=show_index, floatfmt='.2f', numalign='decimal', stralign='left')
 
 
-def get_symbol(meal_name, note_list: list) -> str:
+def get_symbol(meal_name: str, note_list: list) -> str:
     symbol_dict = {'vegan': u'🍃', 'vegetarisch': u'🥕', 'fleisch': u'🥩', 'steak': u'🥩', 'wurst': u'🥩'}
 
     if len(note_list) == 0:

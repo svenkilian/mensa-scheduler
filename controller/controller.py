@@ -86,7 +86,7 @@ def get_daily_menu(update, context, chat_id, l6=False):
     for line, contents in line_data:
         contents = contents.loc[line].reset_index().apply(
             lambda
-                x: f'{emojize(":small_orange_diamond:", use_aliases=True)} {x["name"]}',
+                x: f'▫ {x["name"]} {x["symbol"]}',
             axis=1).tolist()  # TODO: Add number emojis to lines
 
         if any(e in line for e in whitelist):

@@ -59,7 +59,7 @@ class Mensa:
 
         :return:
         """
-        df = pd.DataFrame.from_records(self.get_daily_menu(offset=offset), index=['category', 'name'])
+        df = pd.DataFrame.from_records(self.get_daily_menu(offset=offset), index='category')
         # df.set_index(['category', 'name'], inplace=True)
 
         if mains_only:
@@ -69,7 +69,8 @@ class Mensa:
             lambda x: '{:4.2f}'.format(float(x.get('students'))) + ' €' if x.get(
                 'students') is not None else '-')  # Extract student prices
 
-        df['symbol'] = df.reset_index().apply(lambda x: get_symbol(x['name'], x['notes']), axis=1)
+        df['symbol'] = df.apply(lambda x: get_symbol(x['name'], x['notes']), axis=1)
+        df.set_index('name', append=True, inplace=True)
 
         df.drop(columns=['id', 'prices'], inplace=True)
 
