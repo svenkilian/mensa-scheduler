@@ -42,7 +42,7 @@ def main():
     queue = updater.job_queue
 
     # JOB: Schedule daily menu update message
-    job_daily_update = queue.run_daily(time=datetime.time(hour=17, minute=44, second=0, tzinfo=pytz.timezone('CET')),
+    job_daily_update = queue.run_daily(time=datetime.time(hour=17, minute=56, second=0, tzinfo=pytz.timezone('CET')),
                                        callback=callback_daily_update)
 
     # JOB: Start bot
