@@ -276,6 +276,12 @@ def button(update, context) -> None:
                                      text=f'Timed out. Request sent by {query.from_user.first_name}',
                                      parse_mode=telegram.ParseMode.MARKDOWN)
 
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f'Error message: {toe}',
+                                     parse_mode=telegram.ParseMode.MARKDOWN)
+
+            print(toe)
+
 
 def unknown(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text='Sorry, I didn\'t understand that command.')
