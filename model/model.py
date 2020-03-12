@@ -1,9 +1,11 @@
 import datetime
+import math
 
 import pandas as pd
+import numpy as np
 import requests
 
-from utils.utils import get_symbol
+from utils.utils import get_symbol, pretty_print_table, prettify_table
 
 
 class Mensa:
@@ -92,16 +94,35 @@ class PollData:
 
     def set_choice(self, user_first_name, option):
         self.data.loc[user_first_name, option] = 1
+
         self.data.loc[user_first_name, 'Out'] = 0
 
     def get_results(self):
-        times = self.data.T.apply(lambda x: ', '.join(x.loc[x == 1].index.tolist()), axis=1)
-        print(times)
+        times = self.data.T.apply(lambda x: ', '.join(x.loc[x == 1].index.tolist()), axis=1). \
+            rename('attendees',
+                   inplace=True).to_frame()
+        times['total'] = self.data.T.apply(lambda x: int(np.sum(x)) if not np.isnan(np.sum(x)) else 0, axis=1)
 
-        return times.to_string()
+        max_votes = times['total'].max()
+        times['is_choice'] = times['total'].apply(lambda x: x == max_votes)
+        unique_max = sum(times['is_choice']) == 1
+        times.reset_index(inplace=True)
+        times.columns = ['time', 'attendees', 'total', 'is_choice']
+        times['time'] = times.apply(lambda x: str(f'{x["time"]} ({x["total"]}):'), axis=1)
+        times['attendees'] = times.apply(
+            lambda x: str(f'{x["attendees"]} ✔') if (x['is_choice'] and unique_max) else x['attendees'], axis=1)
+        times.set_index('time', inplace=True)
+        times.drop(columns=['total', 'is_choice'], inplace=True)
+        print(prettify_table(times, show_index=True, tablefmt='simple'))
+        return prettify_table(times, show_index=True, tablefmt='simple')
+
+        # 'plain', 'simple', 'grid', 'pipe', 'orgtbl', 'rst', 'mediawiki', 'latex', 'latex_raw' and 'latex_booktabs
 
     def delete_user(self, user_first_name, times_only=False):
         if times_only:
             self.data.loc[user_first_name, [col for col in self.data.columns if col != 'Out']] = 0
         else:
             self.data.loc[user_first_name, :] = 0
+
+    def checkall_user(self, user_first_name):
+        self.data.loc[user_first_name, [col for col in self.data.columns if col != 'Out']] = 1

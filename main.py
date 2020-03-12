@@ -32,7 +32,7 @@ def main():
     with open(os.path.join(config.ROOT_DIR, 'data/connection_token.txt'), 'r') as f:
         token = f.read()
 
-    updater = Updater(token=token, use_context=True)
+    updater = Updater(token=token, use_context=True, request_kwargs={'read_timeout': 20, 'connect_timeout': 20})
     print(
         f'Successfully created Updater with username {Style.BRIGHT}{updater.bot.username}{Style.RESET_ALL} '
         f'and display name {Style.BRIGHT}{updater.bot.first_name}{Style.RESET_ALL}.')
@@ -42,7 +42,7 @@ def main():
     queue = updater.job_queue
 
     # JOB: Schedule daily menu update message
-    job_daily_update = queue.run_daily(time=datetime.time(hour=17, minute=56, second=0, tzinfo=pytz.timezone('CET')),
+    job_daily_update = queue.run_daily(time=datetime.time(hour=20, minute=57, second=0, tzinfo=pytz.timezone('CET')),
                                        callback=callback_daily_update)
 
     # JOB: Start bot

@@ -1,4 +1,6 @@
 import datetime
+import socket
+
 from math import ceil
 
 import telegram
@@ -76,8 +78,8 @@ def get_daily_menu(update, context, chat_id, l6=False):
     date = (datetime.date.today() + datetime.timedelta(days=offset))
 
     if not l6:
-        text = f'*{Mensa().get_info().get("name")}* {emojize(":fork_and_knife:", use_aliases=True)}\n' \
-               f'*Menu for {date.strftime("%A, %B %d, %Y")}*\n'
+        text = f'<b>{Mensa().get_info().get("name")}</b> {emojize(":fork_and_knife:", use_aliases=True)}\n' \
+               f'<b>Menu for {date.strftime("%A, %B %d, %Y")}</b>\n'
         whitelist = ['Linie']
 
     else:
@@ -94,26 +96,27 @@ def get_daily_menu(update, context, chat_id, l6=False):
             axis=1).tolist()  # TODO: Add number emojis to lines
 
         if any(e in line for e in whitelist):
-            text += f'\n\n*{line}*:\n' + '\n'.join(contents)
+            text += f'\n\n<b>{line}</b>:\n' + '\n'.join(contents)
 
-    context.bot.send_message(chat_id=chat_id,
-                             text=text,
-                             parse_mode=telegram.ParseMode.MARKDOWN)
-    context.bot.send_message(chat_id=chat_id,
-                             text=f'<a href="https://openmensa.org/c/31/{date}">Full menu</a>',
-                             parse_mode=telegram.ParseMode.HTML)
+    text += f'\n\n<a href="https://openmensa.org/c/31/{date}">Full menu</a>'
+
+    # context.bot.send_message(chat_id=chat_id,
+    #                          text=f'<a href="https://openmensa.org/c/31/{date}">Full menu</a>',
+    #                          parse_mode=telegram.ParseMode.HTML)
 
     if offset == 0:
-        keyboard = [[InlineKeyboardButton('Tomorrow\'s Menu', callback_data='tomorrow')]]
-        keyboard[0].append(InlineKeyboardButton('L6 Menu', callback_data='l6_today'))
-        keyboard[0].append(InlineKeyboardButton('Schedule', callback_data='daily_poll'))
+        keyboard = [[InlineKeyboardButton('Tomorrow\'s Menu', callback_data='tomorrow'),
+                     InlineKeyboardButton('L6 Menu', callback_data='l6_today')],
+                    [InlineKeyboardButton('Schedule', callback_data='daily_poll')]]
     else:
-        keyboard = [[InlineKeyboardButton('Today\'s Menu', callback_data='today')]]
-        keyboard[0].append(InlineKeyboardButton('L6 Menu', callback_data='l6_tomorrow'))
-        keyboard[0].append(InlineKeyboardButton('Schedule', callback_data='daily_poll'))
+        keyboard = [[InlineKeyboardButton('Today\'s Menu', callback_data='today'),
+                     InlineKeyboardButton('L6 Menu', callback_data='l6_tomorrow')],
+                    [InlineKeyboardButton('Schedule', callback_data='daily_poll')]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(chat_id=chat_id, text='Further info:', reply_markup=reply_markup)
+    context.bot.send_message(chat_id=chat_id,
+                             text=text,
+                             parse_mode=telegram.ParseMode.HTML, reply_markup=reply_markup)
 
 
 def today(update, context):
@@ -167,18 +170,17 @@ def schedule(update, context):
     keyboard = [[] for _ in range(n_rows)]
     for num, option in enumerate(options):
         row_index = num // 3
-        print(row_index)
         keyboard[row_index].append(InlineKeyboardButton(option, callback_data=f'option_{num}'))
 
     keyboard.append([InlineKeyboardButton('Delete all', callback_data=f'option_delete')])
-    keyboard.append([InlineKeyboardButton('Deal me out', callback_data=f'option_declined')])
-    options.append('Out')
+    keyboard.append([InlineKeyboardButton('Flexible', callback_data=f'option_flexible'),
+                     InlineKeyboardButton('Deal me out', callback_data=f'option_declined')])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     context.chat_data['current_poll'] = PollData(options)
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text='Please choose:', reply_markup=reply_markup)
+    context.bot.send_message(chat_id=update.effective_chat.id, text='Please choose your preferred times:', reply_markup=reply_markup)
 
 
 def close_poll(update, context):
@@ -261,6 +263,8 @@ def button(update, context) -> None:
                 context.chat_data['current_poll'].delete_user(query.from_user.first_name, times_only=True)
             elif option_chosen == 'delete':
                 context.chat_data['current_poll'].delete_user(query.from_user.first_name)
+            elif option_chosen == 'flexible':
+                context.chat_data['current_poll'].checkall_user(query.from_user.first_name)
 
         # context.bot.send_message(chat_id=update.effective_chat.id, text=f'*{query.from_user.username}: {query.data}*',
         #                          parse_mode=telegram.ParseMode.MARKDOWN)
@@ -268,9 +272,10 @@ def button(update, context) -> None:
         try:
             context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=query.message.message_id,
                                           text=context.chat_data['current_poll'].get_results(),
-                                          reply_markup=query.message.reply_markup)
+                                          reply_markup=query.message.reply_markup, parse_mode=telegram.ParseMode.HTML)
         except telegram.error.BadRequest as bre:
             print('Message did not change.')
+
         except telegram.error.TimedOut as toe:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=f'Timed out. Request sent by {query.from_user.first_name}',
@@ -280,7 +285,8 @@ def button(update, context) -> None:
                                      text=f'Error message: {toe}',
                                      parse_mode=telegram.ParseMode.MARKDOWN)
 
-            print(toe)
+            print(toe.message)
+            print(toe.message)
 
 
 def unknown(update, context):
