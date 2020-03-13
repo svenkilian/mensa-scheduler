@@ -150,8 +150,8 @@ def tomorrow(update, context):
 
 
 def callback_daily_update(context: telegram.ext.CallbackContext):
-    # get_daily_menu(update=None, context=context, chat_id=-1001463530288)
-    get_daily_menu(update=None, context=context, chat_id=-1001316049000)
+    get_daily_menu(update=None, context=context, chat_id=-1001463530288)
+    # get_daily_menu(update=None, context=context, chat_id=-1001316049000)
 
 
 def callback_daily_results(context: telegram.ext.CallbackContext):
