@@ -26,7 +26,7 @@ def prettify_table(df: pd.DataFrame, headers='keys', tablefmt='fancy_grid', show
 
 def get_symbol(meal_name: str, note_list: list) -> str:
     symbol_dict = {'vegan': u'🍃', 'vegetarisch': u'🥕', 'fleisch': u'🥩', 'steak': u'🥩', 'wurst': u'🥩',
-                   u'hnchen': u'🐔', 'schwein': u'🐖'}
+                   'hnchen': u'🐔', 'schwein': u'🐖', 'rinder': u'🐄'}
 
     if len(note_list) == 0:
         note_string = ''
