@@ -45,8 +45,8 @@ def main():
     job_daily_update = queue.run_daily(time=datetime.time(hour=9, minute=30, second=30, tzinfo=pytz.timezone('CET')),
                                        callback=callback_daily_update)
 
-    job_daily_update = queue.run_daily(time=datetime.time(hour=11, minute=0, second=10, tzinfo=pytz.timezone('CET')),
-                                       callback=callback_daily_results)
+    job_daily_results = queue.run_daily(time=datetime.time(hour=11, minute=0, second=10, tzinfo=pytz.timezone('CET')),
+                                        callback=callback_daily_results)
 
     # JOB: Start bot
     updater.start_polling()

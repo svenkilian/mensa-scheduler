@@ -69,54 +69,56 @@ def start(update, context):
 
 def get_daily_menu(update, context, chat_id, l6=False):
     text = ''
+    mensa = Mensa()
 
     if context.user_data is not None:
         offset = context.user_data['offset']
     else:
         offset = 0
 
-    date = (datetime.date.today() + datetime.timedelta(days=offset))
+    if mensa.is_open(datetime.date.today() + datetime.timedelta(days=offset)):
+        date = (datetime.date.today() + datetime.timedelta(days=offset))
 
-    if not l6:
-        text = f'<b>{Mensa().get_info().get("name")}</b> {emojize(":fork_and_knife:", use_aliases=True)}\n' \
-               f'<b>Menu for {date.strftime("%A, %B %d, %Y")}</b>\n'
-        whitelist = ['Linie']
+        if not l6:
+            text = f'<b>{mensa.get_info().get("name")}</b> {emojize(":fork_and_knife:", use_aliases=True)}\n' \
+                   f'<b>Menu for {date.strftime("%A, %B %d, %Y")}</b>\n'
+            whitelist = ['Linie']
 
-    else:
-        print('L6')
-        whitelist = ['L6 Update']
+        else:
+            print('L6')
+            whitelist = ['L6 Update']
 
-    line_data = [(line, contents) for line, contents in
-                 Mensa().meal_data_lines(offset=offset)]
+        line_data = [(line, contents) for line, contents in
+                     mensa.meal_data_lines(offset=offset)]
 
-    for line, contents in line_data:
-        contents = contents.loc[line].reset_index().apply(
-            lambda
-                x: f'▫ {x["name"]} {x["symbol"]}',
-            axis=1).tolist()  # TODO: Add number emojis to lines
+        for line, contents in line_data:
+            contents = contents.loc[line].reset_index().apply(
+                lambda
+                    x: f'▫ {x["name"]} {x["symbol"]}',
+                axis=1).tolist()  # TODO: Add number emojis to lines
 
-        if any(e in line for e in whitelist):
-            text += f'\n\n<b>{line}</b>:\n' + '\n'.join(contents)
+            if any(e in line for e in whitelist):
+                text += f'\n\n<b>{line}</b>:\n' + '\n'.join(contents)
 
-    text += f'\n\n<a href="https://openmensa.org/c/31/{date}">Full menu</a>'
+        text += f'\n\n<a href="https://openmensa.org/c/31/{date}">Full menu</a>'
 
-    # context.bot.send_message(chat_id=chat_id,
-    #                          text=f'<a href="https://openmensa.org/c/31/{date}">Full menu</a>',
-    #                          parse_mode=telegram.ParseMode.HTML)
+        # context.bot.send_message(chat_id=chat_id,
+        #                          text=f'<a href="https://openmensa.org/c/31/{date}">Full menu</a>',
+        #                          parse_mode=telegram.ParseMode.HTML)
 
-    if offset == 0:
-        keyboard = [[InlineKeyboardButton('Tomorrow\'s Menu', callback_data='tomorrow'),
-                     InlineKeyboardButton('L6 Menu', callback_data='l6_today')],
-                    [InlineKeyboardButton('Schedule', callback_data='daily_poll')]]
-    else:
-        keyboard = [[InlineKeyboardButton('Today\'s Menu', callback_data='today'),
-                     InlineKeyboardButton('L6 Menu', callback_data='l6_tomorrow')],
-                    [InlineKeyboardButton('Schedule', callback_data='daily_poll')]]
+        if offset == 0:
+            keyboard = [[InlineKeyboardButton('Tomorrow\'s Menu', callback_data='tomorrow'),
+                         InlineKeyboardButton('L6 Menu', callback_data='l6_today')],
+                        [InlineKeyboardButton('Schedule', callback_data='daily_poll')]]
+        else:
+            keyboard = [[InlineKeyboardButton('Today\'s Menu', callback_data='today'),
+                         InlineKeyboardButton('L6 Menu', callback_data='l6_tomorrow')],
+                        [InlineKeyboardButton('Schedule', callback_data='daily_poll')]]
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(chat_id=chat_id,
-                             text=text,
-                             parse_mode=telegram.ParseMode.HTML, reply_markup=reply_markup)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        context.bot.send_message(chat_id=chat_id,
+                                 text=text,
+                                 parse_mode=telegram.ParseMode.HTML, reply_markup=reply_markup)
 
 
 def today(update, context):
@@ -155,7 +157,8 @@ def callback_daily_update(context: telegram.ext.CallbackContext):
 
 
 def callback_daily_results(context: telegram.ext.CallbackContext):
-    close_daily_poll(update=None, context=context)
+    if Mensa().is_open():
+        close_daily_poll(update=None, context=context)
 
 
 def daily_poll(update, context):

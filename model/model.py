@@ -45,6 +45,11 @@ class Mensa:
         """
         return requests.get(f'{self.base_url}canteens/{self.id}/days', params={'start': datetime.date.today()}).json()
 
+    def is_open(self, date=datetime.date.today()):
+        opening_days = pd.DataFrame.from_records(self.get_days(), index='date')
+        opening_days.index = pd.DatetimeIndex(opening_days.index)
+        return not opening_days.loc[date, 'closed']
+
     def get_daily_menu(self, offset=0) -> dict:
         """
         Get today's menu
